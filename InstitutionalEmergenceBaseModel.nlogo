@@ -35,60 +35,33 @@ to setup
   ask comps [ set action select-action ]
   ask comps [ set condition select-condition ]         ; agents select strategy
   ask comps [ set strategy (list action condition) ]
-  ask comps [
-    type " action is "
-      show action
-      type " condition is "
-      show condition
-  ]
 end
 
 to go
   if (check-end = true) [stop]                         ; check if energy = 0 or ticks = 2000
-  ask comps [ set energy (energy - EnergyConsumption)] ; agents lose energy
+  lose-energy
   grow-resource                                        ; resource grows
-  if(ResourceEnergy <= 0) [ type "Resource depleated" stop]
-;  if (ticks mod InstitutionalEmergenceTime) =  0 [     ; if institutional emergence time
-;    if (check-institutional-change = true) [
-;      establish-new-institution
-;      pick-best-strategy
-;      individual-exploit-resource
-;    ]
-;  ]
-;  ifelse (InstitutionExists? = true)[
-;    exploit-institution
-;  ][
-    check-energy
-    pick-best-strategy
-    individual-exploit-resource                        ;continue to evolve individual strategy
-  ;]
-  if (ResourceEnergy <= 0) [stop]
   consume-resource
-  if(ticks mod 500) = 0 [
-    ask comps [
-      type " energy is "
-      show energy
-      type " action is "
-      show action
-      type " condition is "
-      show condition
-    ]
+  ask comps[
+    type " tick: " show ticks
+    type " energy: " show energy
+    ;type " action: " show action
+    ;type " condition: " show condition
   ]
-  if(ticks = 2000)[
-    ask comps[
-      show energy type " <- energy"
-    ]
-  ]
+  type " ResourceEnergy: " show ResourceEnergy
   tick
 end
 
 to-report select-action
-  report 2 + random 18                                 ; random between 2 and 20 for consumption
+  report 10
 end
 
 to-report select-condition
-  set ConditionList (list 3 2 20 250 0 1)              ; 0 = (energy = 0) and 1 = (true (always)) saving as list of ints for ease
-  report one-of ConditionList
+  report 1
+end
+
+to lose-energy
+  ask comps [ set energy (energy - EnergyConsumption)]                                                 ;agents lose energy according to selected parameters
 end
 
 to grow-resource
@@ -98,88 +71,22 @@ to grow-resource
   set ResourceEnergy (ResourceEnergy + ResourceGain)                                                    ; set resource to new resource quantity
 end
 
-to-report check-institutional-change
-  ifelse ((count comps with [lowEnergy?  = true]) / 100 > ThresholdForChange)[                          ;if threshold for change met
-    report true
-   ][
-    report false
-  ]
-end
-
-to-report check-institution
-  report InstitutionExists?
-end
 
 to-report check-end ;
-  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 2000) [
+  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 2) [
     report true
   ][
     report false
   ]
 end
 
-to individual-exploit-resource
-  ask comps [ if (lowEnergy? = true ) [
-    if (ResourceEnergy <= 0) [ type "Resource depleated" stop]
-      ifelse (random-float 1 < InnovationRate)[       ; check if innovation
-        set action select-action                      ; select new random solution
-        set condition select-condition
-        set strategy (list action condition)
-      ]
-      [                                               ; else copy best agent strategy (agent with highest energy)
-        set action BestAction
-        set condition BestCondition
-        set strategy (list action condition)
-      ]
-    ]                                                 ; end of low energy strategy change
-  ]
-end
-
-to exploit-institution
-  ask comps [
-    set institutionC InstitutionCondition
-    set institutionA InstitutionAction
-    set institutionS (list institutionA institutionC)
-  ]
-
-end
-
-to establish-new-institution
-  let frequent modes [strategy] of comps
-  type " action: " type item 0 item 0 frequent type " condition: " type item 1 item 0 frequent
-  ;ask comps [show action show condition]
-  ;ktype "frequent = " type frequent
-  ask comps [
-    set institutionA item 0 item 0 frequent
-    set institutionC item 1 item 0 frequent
-    set institutionS frequent
-  ]
-  set InstitutionExists? true
-end
-
 to consume-resource
   ask comps [
-;    ifelse InstitutionExists? [
-;    (ifelse ;all agents consume
-;      institutionC = 0 [
-;        if (energy <= 0) [                                  ; when energy <= 0 consume
-;          set energy (energy + InstitutionA)
-;          set ResourceEnergy ResourceEnergy - InstitutionA
-;        ]
-;      ]
-;      institutionC = 1 [                                        ; always consume
-;        set energy (energy + InstitutionA)
-;        set ResourceEnergy ResourceEnergy - InstitutionA
-;      ][
-;        if((ticks mod institutionC)= 0) [                       ; consume on condition
-;          set energy (energy + InstitutionA)
-;          set ResourceEnergy ResourceEnergy - InstitutionA
-;        ]
-;    ])
-;    ][
       (ifelse                                                ;all agents consume
       condition = 0 [
+        type " Condition is 0 "
         if (energy <= 0) [                                   ; when energy <= 0 consume
+          type " setting energy to " show energy + action
           set energy (energy + action)
           set ResourceEnergy ResourceEnergy - action
         ]
@@ -203,21 +110,6 @@ to check-energy
       set lowEnergy? true
     ][
       set lowEnergy? false
-    ]
-  ]
-end
-
-to pick-best-strategy
-  ask comps [
-    if (energy > HighestEnergy) [                             ; find best strategy from highest energy
-      set HighestEnergy energy
-      set BestAction action
-      set BestCondition condition
-      set BestStrategy (list action condition)
-      type " best energy: "
-      show HighestEnergy
-      type " best strat: "
-      show BestStrategy
     ]
   ]
 end
@@ -248,17 +140,6 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
-
-SWITCH
-0
-0
-0
-0
-NIL
-NIL
-1
-1
--1000
 
 SLIDER
 20
@@ -318,7 +199,7 @@ CarryingCapacity
 CarryingCapacity
 5000
 20000
-12000.0
+5000.0
 1000
 1
 NIL
@@ -333,7 +214,7 @@ GrowthRate
 GrowthRate
 0.1
 0.5
-0.3
+0.1
 0.2
 1
 NIL
@@ -347,7 +228,7 @@ CHOOSER
 EnergyConsumption
 EnergyConsumption
 1 5 10
-0
+1
 
 SLIDER
 21
@@ -409,20 +290,38 @@ ThresholdForChange
 PLOT
 685
 37
-1178
-477
+1049
+322
 Agent Energy at each tick
 Time (ticks)
 Agent Energy
 0.0
-2001.0
+10.0
+0.0
+100.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "ask comps [ \ncreate-temporary-plot-pen (word who)\nset-plot-pen-color color\nplotxy ticks energy\n]"
+
+PLOT
+685
+359
+1056
+564
+Resource Energy at each tick
+NIL
+NIL
+0.0
+10.0
 0.0
 5000.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "ask comps [ \ncreate-temporary-plot-pen (word who)\nset-plot-pen-color color\nplotxy ticks energy\n]"
+"default" 1.0 0 -16777216 true "" "plotxy ticks ResourceEnergy"
 
 @#$#@#$#@
 ## WHAT IS IT?
