@@ -3,9 +3,6 @@ globals [
   ConditionList
   ResourceEnergy
   HighestEnergy
-  BestAction
-  BestCondition
-  BestStrategy
   InstitutionExists?
   InstitutionCondition
   InstitutionAction
@@ -35,28 +32,50 @@ to setup
   ask comps [ set action select-action ]
   ask comps [ set condition select-condition ]         ; agents select strategy
   ask comps [ set strategy (list action condition) ]
+  create-neighbours ; create links
 end
 
 to go
-  if (check-end = true) [stop]                         ; check if energy = 0 or ticks = 2000
+  if (check-end = true) [ stop ]                         ; check if energy = 0 or ticks = 2000
   lose-energy
   grow-resource                                        ; resource grows
   consume-resource
+  ask comps [ evaluate-strategy ]
   ask comps[
     type " tick: " show ticks
     type " energy: " show energy
     type " action: " show action
     type " condition: " show condition
   ]
+;  ask comps[ show my-out-links]
+  rewire-links
+  type " ResourceEnergy: " show ResourceEnergy
+;  type " Links: " show count links
   tick
 end
 
 to-report select-action
-  report 10
+  report 2 + random 18
 end
 
 to-report select-condition
-  report 1
+  set ConditionList (list 3 2 20 250 0 1)
+  report one-of ConditionList
+end
+
+to create-neighbours
+  ask comps [
+    create-links-to n-of 2 other comps
+  ]
+end
+
+to rewire-links
+  ask comps [
+    if (random-float 1 < 0.05)[
+      ask my-out-links [die]
+      create-links-to n-of 2 other comps
+    ]
+  ]
 end
 
 to lose-energy
@@ -72,7 +91,7 @@ end
 
 
 to-report check-end ;
-  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > ) [
+  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 5) [
     report true
   ][
     report false
@@ -83,9 +102,8 @@ to consume-resource
   ask comps [
       (ifelse                                                ;all agents consume
       condition = 0 [
-        type " Condition is 0 "
         if (energy <= 0) [                                   ; when energy <= 0 consume
-          type " setting energy to " show energy + action
+          ;type " setting energy to " show energy + action
           set energy (energy + action)
           set ResourceEnergy ResourceEnergy - action
         ]
@@ -100,7 +118,7 @@ to consume-resource
         ]
     ])
     ]
-  ;]
+
 end
 
 to check-energy
@@ -109,6 +127,39 @@ to check-energy
       set lowEnergy? true
     ][
       set lowEnergy? false
+    ]
+  ]
+end
+
+to evaluate-strategy
+  let bestAction action
+  let bestCondition condition
+  let bestNeighbourEnergy energy
+  let origin self
+;  type " my comp: " show self
+;  type " my energy: " show energy
+  if (energy < 0) [
+    ifelse (random-float 1 < InnovationRate)[   ;random innovation
+      set action select-action
+      set condition select-condition
+      set strategy (list action condition)
+    ][
+      ask out-link-neighbors  [
+;        type " origin: " show origin
+;        type " my neighbor: " show self
+;        type " neighbor energy: " show energy
+;        type " best energy: " show bestNeighbourEnergy
+         if energy > bestNeighbourEnergy [
+          set bestNeighbourEnergy energy
+          set bestAction action
+          set bestCondition condition
+        ]
+      ]
+;      type " best energy: " type bestNeighbourEnergy
+;      type " best action: " type bestAction
+;      type " best condition: " type bestCondition
+      set action bestAction
+      set condition bestCondition
     ]
   ]
 end
@@ -149,7 +200,7 @@ NumberOfAgents
 NumberOfAgents
 0
 100
-5.0
+7.0
 1
 1
 NIL
@@ -213,7 +264,7 @@ GrowthRate
 GrowthRate
 0.1
 0.5
-0.1
+0.3
 0.2
 1
 NIL
