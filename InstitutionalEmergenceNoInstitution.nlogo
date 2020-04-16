@@ -36,21 +36,15 @@ to setup
 end
 
 to go
-  if (check-end = true) [ stop ]                         ; check if energy = 0 or ticks = 2000
+  if (check-end = true) [
+    type "Low Resource -> ResourceEnergy: " show ResourceEnergy
+    stop
+  ]                         ; check if energy = 0 or ticks = 2000
   lose-energy
   grow-resource                                        ; resource grows
   consume-resource
   ask comps [ evaluate-strategy ]
-  ask comps[
-    type " tick: " show ticks
-    type " energy: " show energy
-    type " action: " show action
-    type " condition: " show condition
-  ]
-;  ask comps[ show my-out-links]
   rewire-links
-  type " ResourceEnergy: " show ResourceEnergy
-;  type " Links: " show count links
   tick
 end
 
@@ -91,7 +85,7 @@ end
 
 
 to-report check-end ;
-  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 5) [
+  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 1999) [
     report true
   ][
     report false
@@ -118,7 +112,6 @@ to consume-resource
         ]
     ])
     ]
-
 end
 
 to check-energy
@@ -200,7 +193,7 @@ NumberOfAgents
 NumberOfAgents
 0
 100
-7.0
+100.0
 1
 1
 NIL
@@ -264,7 +257,7 @@ GrowthRate
 GrowthRate
 0.1
 0.5
-0.3
+0.1
 0.2
 1
 NIL
@@ -278,7 +271,7 @@ CHOOSER
 EnergyConsumption
 EnergyConsumption
 1 5 10
-1
+2
 
 SLIDER
 21

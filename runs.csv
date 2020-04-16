@@ -1,0 +1,132 @@
+TFC,0.4
+IET,50
+Innov R,0.1
+Energy Consumption,15
+Growith R,0.5
+carrying K,15000
+no agents,100
+1,ResourceEnergy,-1385.060392051318
+1,Average Agent Energy,148.65
+1,institution present,false
+1,end tick,5
+2,ResourceEnergy,-371.31556302016907
+2,Average Agent Energy,138.69
+2,institution present,false
+2,end tick,5
+3,ResourceEnergy,-3510.4206432767596
+3,Average Agent Energy,160.49
+3,institution present,false
+3,end tick,6
+4,ResourceEnergy,-4488.394909221273
+4,Average Agent Energy,167.57
+4,institution present,false
+4,end tick,6
+5,ResourceEnergy,-1318.2656880115492
+5,Average Agent Energy,145.89
+5,institution present,false
+5,end tick,5
+6,ResourceEnergy,-743.9101583935371
+6,Average Agent Energy,142.39
+6,institution present,false
+6,end tick,5
+7,ResourceEnergy,-2525.258208450561
+7,Average Agent Energy,154.53
+7,institution present,false
+7,end tick,6
+8,ResourceEnergy,-782.7592788092593
+8,Average Agent Energy,142.62
+8,institution present,false
+8,end tick,5
+9,ResourceEnergy,-4227.451565998479
+9,Average Agent Energy,166.04
+9,institution present,false
+9,end tick,6
+10,ResourceEnergy,-4032.517350885345
+10,Average Agent Energy,164.3
+10,institution present,false
+10,end tick,6
+11,ResourceEnergy,-3796.3322767587933
+11,Average Agent Energy,162.72
+11,institution present,false
+11,end tick,6
+12,ResourceEnergy,-1069.4285824638991
+12,Average Agent Energy,145.58
+12,institution present,false
+12,end tick,5
+13,ResourceEnergy,-4228.472338918422
+13,Average Agent Energy,164.53
+13,institution present,false
+13,end tick,6
+14,ResourceEnergy,-482.7548428566661
+14,Average Agent Energy,140.43
+14,institution present,false
+14,end tick,5
+15,ResourceEnergy,-449.60609626196674
+15,Average Agent Energy,139.76
+15,institution present,false
+15,end tick,5
+16,ResourceEnergy,-998.5154670251331
+16,Average Agent Energy,144.43
+16,institution present,false
+16,end tick,5
+17,ResourceEnergy,-3040.6444775340424
+17,Average Agent Energy,158.51
+17,institution present,false
+17,end tick,6
+18,ResourceEnergy,-1219.8544597523742
+18,Average Agent Energy,146.84
+18,institution present,false
+18,end tick,5
+19,ResourceEnergy,-1130.2772478909237
+19,Average Agent Energy,145.7
+19,institution present,false
+19,end tick,5
+20,ResourceEnergy,-321.98231408524407
+20,Average Agent Energy,138.47
+20,institution present,false
+20,end tick,5
+21,ResourceEnergy,-3995.8115278006026
+21,Average Agent Energy,164.72
+21,institution present,false
+21,end tick,6
+22,ResourceEnergy,-21.986609285710074
+22,Average Agent Energy,135.83
+22,institution present,false
+22,end tick,5
+23,ResourceEnergy,-3524.288418509491
+23,Average Agent Energy,162.05
+23,institution present,false
+23,end tick,6
+24,ResourceEnergy,-3700.4889417930885
+24,Average Agent Energy,162.81
+24,institution present,false
+24,end tick,6
+25,ResourceEnergy,-2866.2547987640523
+25,Average Agent Energy,156.21
+25,institution present,false
+25,end tick,6
+26,ResourceEnergy,-166.5146376907869
+26,Average Agent Energy,137.57
+26,institution present,false
+26,end tick,5
+27,ResourceEnergy,-845.5292707648696
+27,Average Agent Energy,142.82
+27,institution present,false
+27,end tick,5
+28,ResourceEnergy,-290.982421131861
+28,Average Agent Energy,139.01
+28,institution present,false
+28,end tick,5
+29,ResourceEnergy,-781.2762725115135
+29,Average Agent Energy,142.47
+29,institution present,false
+29,end tick,5
+30,ResourceEnergy,-3116.0488602704745
+30,Average Agent Energy,159.17
+30,institution present,false
+30,end tick,6
+Mean ticks end,5.433333333333334
+compliance probability,0.5
+Mean % non compliance 30 runs,94.83333333333333
+Mean AE 30 runs,150.6933333333333
+Mean RE 30 runs,-1981.0801206729386

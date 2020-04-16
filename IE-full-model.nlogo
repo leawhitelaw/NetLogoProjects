@@ -1,20 +1,12 @@
-extensions [csv]
+extensions [nw]
 breed [comps comp] ;creat computer breed
 globals [
-  ;ConditionList
+  ConditionList
   ResourceEnergy
   InstitutionalChange?
   InstitutionExists?
   InstitutionCondition
   InstitutionAction
-  iteration-counter
-  output-list
-  mean-agent-energy
-  mean-resource-energy
-;  compliance-percentage
-  mean-ticks-end
-  number-institution-created
-  institutions-list
 ]                                                      ; global variables used throughout code
 
 comps-own [
@@ -28,30 +20,8 @@ comps-own [
   institutionS
 ]                                                      ; variables belonging to a computer
 
-to zero-counter
-  set iteration-counter 1
-  let noagents (list "no agents" NumberOfAgents)
-  let carrying (list "carrying K" CarryingCapacity)
-  let growth (list "Growith R" GrowthRate)
-  let energylist (list "Energy Consumption" EnergyConsumption)
-  let innov (list "Innov R" InnovationRate)
-  let iet (list "IET" InstitutionalEmergenceTime)
-  let tfc (list "TFC" ThresholdForChange)
-  set number-institution-created 0
-  set mean-agent-energy []
-  set mean-resource-energy []
-  set mean-ticks-end []
-  set institutions-list []
-  set output-list (list noagents carrying growth energylist innov iet tfc)
-end
-
-
 to setup
-  clear-ticks
-  clear-turtles
-  clear-drawing
-  clear-patches
-  clear-all-plots
+  clear-all
   reset-ticks
   create-comps NumberOfAgents
   ask comps [
@@ -67,92 +37,30 @@ to setup
 end
 
 to go
-  if (check-end = true) [ ;add values to list of outputs
-    calculate-totals
-    set iteration-counter iteration-counter + 1
-    if (iteration-counter > 30)[
-      output-csv
-      stop
-    ]
-    setup
-    go
+  if (check-end = true) [
+    type "ResourceEnergy: " show ResourceEnergy
+    type "Average Agent Energy" show mean [energy] of comps
+    type "Institution present?" show InstitutionExists?
+    type "ticks end: " show ticks
+    stop
   ]                                                    ; check if energy = 0 or ticks = 2000
   lose-energy
   grow-resource                                        ; resource grows
-  check-energy
-  check-institutional-change                          ; *****************
-  if InstitutionalChange? = true [                    ; *****************
-    establish-new-institution                         ; comment out these 5 lines for no institution results
-    set InstitutionalChange? false                    ; *****************
-  ]                                                   ; *****************
   ifelse InstitutionExists? = true [
-    ask comps[
     consume-resource-institution
-    ]
   ][
     consume-resource
   ]
   ask comps [ evaluate-strategy ]
   rewire-links
-
+  check-energy
+  check-institutional-change
+  if InstitutionalChange? = true [
+    ;type " forming institution "
+    establish-new-institution
+    set InstitutionalChange? false
+  ]
   tick
-end
-
-to calculate-totals
-    let mean-energy-comps (mean [energy] of comps)
-    let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
-    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
-    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
-    let ticklist (list iteration-counter "end tick" ticks)
-    let institution-created (list "strategy created: " (list InstitutionAction InstitutionCondition))
-
-    set output-list insert-item 0 output-list resourcelist
-    set output-list insert-item 0 output-list meanAgentlist
-    set output-list insert-item 0 output-list institutionPlist
-    set output-list insert-item 0 output-list ticklist
-
-  if InstitutionExists? = true [
-    set number-institution-created number-institution-created + 1
-    set institutions-list insert-item 0 institutions-list (list InstitutionAction InstitutionCondition)
-    set output-list insert-item 0 output-list institution-created
-  ]
-
-    if ticks > 1999 and InstitutionExists? = true [ ;only calculate mean for simulations that didn't depleat! and InstitutionExists? = true ;< - add this in to calculate institution present
-;    set institutions-created insert-item 0 institutions-created (list InstitutionAction InstitutionCondition)
-    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
-    set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
-  ]
-    set mean-ticks-end insert-item 0 mean-ticks-end ticks
-
-    type "ResourceEnergy: " show ResourceEnergy
-    type "Average Agent Energy" show mean [energy] of comps
-    type "Institution present?" show InstitutionExists?
-    type "ticks end: " show ticks
-;    type "% non compliance at end: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
-end
-
-to output-csv
-;  let complianceTotalList (list "Mean C 30 runs" (mean compliance-percentage))
-  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
-  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
-  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
-  let standard-dev-agent standard-deviation mean-agent-energy
-  let standard-dev-resource standard-deviation mean-resource-energy
-  let std-err-agents (standard-dev-agent / (sqrt (length mean-agent-energy)))
-  let std-err-resource (standard-dev-resource / (sqrt (length mean-resource-energy)))
-
-  let std-err-agents-print (list "Std error AE" std-err-agents)
-  let std-err-resource-print (list "Std error RE" std-err-resource)
-
-  set output-list insert-item 0 output-list meanTicksTotalList
-  set output-list insert-item 0 output-list meanAgentTotallist
-  set output-list insert-item 0 output-list resourceTotallist
-  set output-list insert-item 0 output-list std-err-agents-print
-  set output-list insert-item 0 output-list std-err-resource-print
-  set output-list insert-item 0 output-list (list "% institution created" ((number-institution-created / 30) * 100))
-  set output-list insert-item 0 output-list (list "institutions" institutions-list)
-  set output-list reverse output-list
-  csv:to-file "runs.csv" output-list
 end
 
 to-report select-action
@@ -166,7 +74,7 @@ to-report select-action
 end
 
 to-report select-condition
-  let ConditionList (list 3 2 20 250 0 1)
+  set ConditionList (list 3 2 20 250 0 1)
   report one-of ConditionList
 end
 
@@ -235,25 +143,25 @@ to consume-resource
 end
 
 to consume-resource-institution
-;  ask comps [
+  ask comps [
       (ifelse                                                ;all agents consume
-      InstitutionCondition = 0 [
+      institutionC = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
           ;type " setting energy to " show energy + action
-          set energy (energy + InstitutionAction)
-          set ResourceEnergy ResourceEnergy - InstitutionAction
+          set energy (energy + institutionA)
+          set ResourceEnergy ResourceEnergy - institutionA
         ]
       ]
-      InstitutionCondition = 1 [                                        ; always consume
-        set energy (energy + InstitutionAction)
-        set ResourceEnergy ResourceEnergy - InstitutionAction
+      institutionC = 1 [                                        ; always consume
+        set energy (energy + institutionA)
+        set ResourceEnergy ResourceEnergy - institutionA
       ][
-        if((ticks mod InstitutionCondition)= 0) [                       ; consume on condition
-          set energy (energy + InstitutionAction)
-          set ResourceEnergy ResourceEnergy - InstitutionAction
+        if((ticks mod institutionC)= 0) [                       ; consume on condition
+          set energy (energy + institutionA)
+          set ResourceEnergy ResourceEnergy - institutionA
         ]
     ])
-;    ]
+    ]
 end
 
 to check-energy
@@ -273,7 +181,9 @@ to evaluate-strategy
   let origin self
   let neighbor self
   if (energy < 0) [
+;    type " my energy is less than 0! " show self
     ifelse (random-float 1 < InnovationRate)[   ;random innovation
+      ;type "INNOVATE!!! : " show self
       set action select-action
       set condition select-condition
       set strategy (list action condition)
@@ -289,24 +199,32 @@ to evaluate-strategy
       set action bestAction
       set condition bestCondition
       set strategy (list action condition)
+      ;type "New Stragegy : " show strategy
+      ;type "From neighbor: " show neighbor
     ]
   ]
 end
 
 to check-institutional-change
   if (ticks mod InstitutionalEmergenceTime) =  0  and ticks > 0 [
+    ;type " EMERGENCE TIME! "
+    ;type " Comps with energy less than 0: " show count comps with [LowEnergy? = true]
     if (((count comps with [energy < 0]) / 100 )> ThresholdForChange)[                          ;if threshold for change met
+      ;show " Threshold met! "
       set InstitutionalChange? true
     ]
   ]
 end
 
-; CHANGE TO GLOBAL VARIABLES !! !!
-
 to establish-new-institution
   let frequent modes [strategy] of comps
-  set InstitutionAction item 0 item 0 frequent
-  set InstitutionCondition item 1 item 0 frequent
+  ask comps [
+    set institutionA item 0 item 0 frequent
+    ;type " item 0: " type item 0 frequent type " item 1: " type item 1 frequent type " item 0 item 0 : " type item 0 item 0 frequent type " item 1 item 0: " type item 1 item 0 frequent type " item 0 item 1: " type item 0 item 1 frequent
+    set institutionC item 1 item 0 frequent
+    set institutionS frequent
+    ;type " Institutional rule: " show frequent
+  ]
   set InstitutionExists? true
 end
 @#$#@#$#@
@@ -395,7 +313,7 @@ CarryingCapacity
 CarryingCapacity
 5000
 20000
-10000.0
+20000.0
 1000
 1
 NIL
@@ -423,8 +341,8 @@ CHOOSER
 261
 EnergyConsumption
 EnergyConsumption
-1 3 5 10 12 15 17 20
-3
+1 5 10 12 15 17 20
+5
 
 SLIDER
 21
@@ -518,34 +436,6 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plotxy ticks ResourceEnergy"
-
-BUTTON
-14
-490
-168
-523
-zero-counter
-zero-counter
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-MONITOR
-198
-483
-262
-528
-Counter
-iteration-counter
-17
-1
-11
 
 @#$#@#$#@
 ## WHAT IS IT?
