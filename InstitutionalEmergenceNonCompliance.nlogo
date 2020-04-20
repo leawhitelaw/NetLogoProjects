@@ -1,7 +1,6 @@
 extensions [csv]
-breed [comps comp] ;creat computer breed
-globals [
-  ;ConditionList
+breed [comps comp]                                     ;creat computer breed
+globals [                                              ;create global variables that will be used throughout
   ResourceEnergy
   InstitutionalChange?
   InstitutionExists?

@@ -11,8 +11,10 @@ globals [
   output-list
   mean-agent-energy
   mean-resource-energy
-  compliance-percentage
+;  compliance-percentage
   mean-ticks-end
+  number-institution-created
+  institutions-list
 ]                                                      ; global variables used throughout code
 
 comps-own [
@@ -22,9 +24,8 @@ comps-own [
   institutionA
   institutionC
   lowEnergy?
-  strategy                                            ; strategy is set in form [action, condition, compliance]
+  strategy                                            ; strategy is set in form [action, condition]
   institutionS
-  compliance                                           ; binary value representing compliance (can be copied as part of strategy)
 ]                                                      ; variables belonging to a computer
 
 to zero-counter
@@ -36,10 +37,11 @@ to zero-counter
   let innov (list "Innov R" InnovationRate)
   let iet (list "IET" InstitutionalEmergenceTime)
   let tfc (list "TFC" ThresholdForChange)
+  set number-institution-created 0
   set mean-agent-energy []
   set mean-resource-energy []
-  set compliance-percentage []
   set mean-ticks-end []
+  set institutions-list []
   set output-list (list noagents carrying growth energylist innov iet tfc)
 end
 
@@ -59,9 +61,7 @@ to setup
   set InstitutionExists? false
   ask comps [ set action select-action ]
   ask comps [ set condition select-condition ]         ; agents select strategy
-  ask comps [ set compliance compliance-probability ]
-  ask comps [ set strategy (list action condition compliance) ]
-  type "% non compliance at beginning: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+  ask comps [ set strategy (list action condition) ]
   create-neighbours ; create links
   set InstitutionalChange? false
 end
@@ -80,35 +80,18 @@ to go
   lose-energy
   grow-resource                                        ; resource grows
   check-energy
-  check-institutional-change
-  if InstitutionalChange? = true [
-    establish-new-institution
-    set InstitutionalChange? false
-  ]
-  ask comps [
-    ifelse compliance = 0 [
-      ifelse InstitutionExists? = true [
-          consume-resource-institution
-      ][
-        consume-resource
-      ]
-    ][
-      consume-greedy
+;  check-institutional-change                          ; *****************
+;  if InstitutionalChange? = true [                    ; *****************
+;    establish-new-institution                         ; comment out these 5 lines for no institution results
+;    set InstitutionalChange? false                    ; *****************
+;  ]                                                   ; *****************
+  ifelse InstitutionExists? = true [
+    ask comps[
+    consume-resource-institution
     ]
+  ][
+    consume-resource
   ]
-;  ifelse InstitutionExists? = true [
-;    ask comps[
-;      ifelse compliance = 0 [
-;        consume-resource-institution
-;      ][
-;        consume-resource
-;      ]
-;    ]
-;  ][
-;    ask comps [
-;    consume-resource
-;    ]
-;  ]
   ask comps [ evaluate-strategy ]
   rewire-links
 
@@ -116,44 +99,58 @@ to go
 end
 
 to calculate-totals
-    let percent-non-comply (((count comps with [compliance = 1])/ NumberOfAgents) * 100)
     let mean-energy-comps (mean [energy] of comps)
     let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
     let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
     let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
     let ticklist (list iteration-counter "end tick" ticks)
+    let institution-created (list "strategy created: " (list InstitutionAction InstitutionCondition))
+
     set output-list insert-item 0 output-list resourcelist
     set output-list insert-item 0 output-list meanAgentlist
     set output-list insert-item 0 output-list institutionPlist
     set output-list insert-item 0 output-list ticklist
 
+  if InstitutionExists? = true [
+    set number-institution-created number-institution-created + 1
+    set institutions-list insert-item 0 institutions-list (list InstitutionAction InstitutionCondition)
+    set output-list insert-item 0 output-list institution-created
+  ]
 
+    if ticks > 1999 and InstitutionExists? = true [ ;only calculate mean for simulations that didn't depleat! and InstitutionExists? = true ;< - add this in to calculate institution present
+;    set institutions-created insert-item 0 institutions-created (list InstitutionAction InstitutionCondition)
     set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
     set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
+  ]
     set mean-ticks-end insert-item 0 mean-ticks-end ticks
-
-;  if InstitutionExists? = true [
-    set compliance-percentage insert-item 0 compliance-percentage percent-non-comply
-;  ]
 
     type "ResourceEnergy: " show ResourceEnergy
     type "Average Agent Energy" show mean [energy] of comps
     type "Institution present?" show InstitutionExists?
-    type "% non compliance at end: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+    type "ticks end: " show ticks
+;    type "% non compliance at end: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
 end
 
 to output-csv
-  let intialCompliance (list "compliance probability" probabilityNonCompliance)
-  let complianceTotalList (list "Mean % non compliance 30 runs" (mean compliance-percentage))
+;  let complianceTotalList (list "Mean C 30 runs" (mean compliance-percentage))
   let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
   let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
   let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
+  let standard-dev-agent standard-deviation mean-agent-energy
+  let standard-dev-resource standard-deviation mean-resource-energy
+  let std-err-agents (standard-dev-agent / (sqrt (length mean-agent-energy)))
+  let std-err-resource (standard-dev-resource / (sqrt (length mean-resource-energy)))
+
+  let std-err-agents-print (list "Std error AE" std-err-agents)
+  let std-err-resource-print (list "Std error RE" std-err-resource)
 
   set output-list insert-item 0 output-list meanTicksTotalList
-  set output-list insert-item 0 output-list intialCompliance
-  set output-list insert-item 0 output-list complianceTotalList
   set output-list insert-item 0 output-list meanAgentTotallist
   set output-list insert-item 0 output-list resourceTotallist
+  set output-list insert-item 0 output-list std-err-agents-print
+  set output-list insert-item 0 output-list std-err-resource-print
+  set output-list insert-item 0 output-list (list "% institution created" ((number-institution-created / 30) * 100))
+  set output-list insert-item 0 output-list (list "institutions" institutions-list)
   set output-list reverse output-list
   csv:to-file "runs.csv" output-list
 end
@@ -171,14 +168,6 @@ end
 to-report select-condition
   let ConditionList (list 3 2 20 250 0 1)
   report one-of ConditionList
-end
-
-to-report compliance-probability
-  ifelse random-float 1 < probabilityNonCompliance [
-    report 1
-  ][
-    report 0
-  ]
 end
 
 to create-neighbours
@@ -218,7 +207,7 @@ to-report check-end ;
 end
 
 to consume-resource
-  ;ask comps [
+  ask comps [
       (ifelse                                                ;all agents consume
       condition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
@@ -242,16 +231,11 @@ to consume-resource
           ]
         ]
     ])
-    ;]
-end
-
-to consume-greedy
-  set energy (energy + 30)
-  set ResourceEnergy ResourceEnergy - 0
+    ]
 end
 
 to consume-resource-institution
-  ;ask comps [
+;  ask comps [
       (ifelse                                                ;all agents consume
       InstitutionCondition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
@@ -269,7 +253,7 @@ to consume-resource-institution
           set ResourceEnergy ResourceEnergy - InstitutionAction
         ]
     ])
-   ; ]
+;    ]
 end
 
 to check-energy
@@ -286,15 +270,13 @@ to evaluate-strategy
   let bestAction action
   let bestCondition condition
   let bestNeighbourEnergy energy
-  let bestCompliance compliance
   let origin self
   let neighbor self
   if (energy < 0) [
     ifelse (random-float 1 < InnovationRate)[   ;random innovation
       set action select-action
       set condition select-condition
-      set compliance compliance-probability
-      set strategy (list action condition compliance)
+      set strategy (list action condition)
     ][
       ask out-link-neighbors  [
          if energy > bestNeighbourEnergy [
@@ -302,42 +284,11 @@ to evaluate-strategy
           set bestNeighbourEnergy energy
           set bestAction action
           set bestCondition condition
-          set bestCompliance compliance
         ]
       ]
       set action bestAction
       set condition bestCondition
-      set compliance bestCompliance
-      set strategy (list action condition compliance)
-    ]
-  ]
-end
-
-to evaluate-strategy-global
-  let bestEnergy energy
-  let bestAction action
-  let bestCondition condition
-  let bestCompliance compliance
-
-  if (energy < 0) [
-    ifelse (random-float 1 < InnovationRate)[   ;random innovation
-      set action select-action
-      set condition select-condition
-      set compliance compliance-probability
-      set strategy (list action condition compliance)
-    ][
-      ask other comps  [
-         if energy > bestEnergy [
-          set bestEnergy energy
-          set bestCondition condition
-          set bestAction action
-          set bestCompliance compliance
-        ]
-      ]
-      set action bestAction
-      set condition bestCondition
-      set compliance bestCompliance
-      set strategy (list action condition compliance)
+      set strategy (list action condition)
     ]
   ]
 end
@@ -354,14 +305,8 @@ end
 
 to establish-new-institution
   let frequent modes [strategy] of comps
-;  ask comps [
-;    set institutionA item 0 item 0 frequent
-;    set institutionC item 1 item 0 frequent
-;    set institutionS frequent
-;    type " Institutional rule: " show frequent
-;  ]
-  set InstitutionCondition item 1 item 0 frequent
   set InstitutionAction item 0 item 0 frequent
+  set InstitutionCondition item 1 item 0 frequent
   set InstitutionExists? true
 end
 @#$#@#$#@
@@ -478,8 +423,8 @@ CHOOSER
 261
 EnergyConsumption
 EnergyConsumption
-1 3 5 10 15 17 20
-4
+1 3 5 10 12 15 17 20
+6
 
 SLIDER
 21
@@ -601,21 +546,6 @@ iteration-counter
 17
 1
 11
-
-SLIDER
-321
-486
-539
-519
-probabilityNonCompliance
-probabilityNonCompliance
-0.1
-1
-0.1
-0.1
-1
-NIL
-HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
