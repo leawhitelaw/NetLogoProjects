@@ -1,11 +1,9 @@
+extensions [nw]
 breed [comps comp] ;creat computer breed
 globals [
   ConditionList
   ResourceEnergy
-  HighestEnergy
-  BestAction
-  BestCondition
-  BestStrategy
+  InstitutionalChange?
   InstitutionExists?
   InstitutionCondition
   InstitutionAction
@@ -18,7 +16,7 @@ comps-own [
   institutionA
   institutionC
   lowEnergy?
-  strategy
+  strategy                                            ; strategy is set in form [action, condition]
   institutionS
 ]                                                      ; variables belonging to a computer
 
@@ -30,38 +28,77 @@ to setup
     setxy random-xcor random-ycor
   ]
   set ResourceEnergy CarryingCapacity
-  set HighestEnergy 0
   set InstitutionExists? false
   ask comps [ set action select-action ]
   ask comps [ set condition select-condition ]         ; agents select strategy
   ask comps [ set strategy (list action condition) ]
+  create-neighbours ; create links
+  set InstitutionalChange? false
 end
 
 to go
-  if (check-end = true) [stop]                         ; check if energy = 0 or ticks = 2000
+  if (check-end = true) [
+    type "ResourceEnergy: " show ResourceEnergy
+    type "Average Agent Energy" show mean [energy] of comps
+    type "Institution present?" show InstitutionExists?
+    type "ticks end: " show ticks
+    stop
+  ]                                                    ; check if energy = 0 or ticks = 2000
   lose-energy
   grow-resource                                        ; resource grows
-  consume-resource
-  ask comps[
-    type " tick: " show ticks
-    type " energy: " show energy
-    ;type " action: " show action
-    ;type " condition: " show condition
+  ifelse InstitutionExists? = true [
+    ask comps [
+      consume-resource-institution
+    ]
+  ][
+    ask comps [
+      consume-resource
+    ]
   ]
-  type " ResourceEnergy: " show ResourceEnergy
+  ask comps [ evaluate-strategy ]
+  rewire-links
+  check-energy
+  check-institutional-change
+  if InstitutionalChange? = true [
+    establish-new-institution
+    set InstitutionalChange? false
+  ]
   tick
 end
 
 to-report select-action
-  report 10
+  let randomNum 2 + random 18
+  let negativeEnergy -5
+  ifelse (random-float 1 < 0.05)[
+    report -5
+  ][
+    report 2 + random 18
+  ]
 end
 
 to-report select-condition
-  report 1
+  set ConditionList (list 3 2 20 250 0 1)
+  report one-of ConditionList
+end
+
+to create-neighbours
+  ask comps [
+    create-links-to min-n-of 2 other turtles [ distance myself ]
+  ]
+end
+
+to rewire-links
+  ask comps [
+    if (random-float 1 < 0.05)[
+      ask my-out-links [die]
+      setxy random-xcor random-ycor
+      create-links-to min-n-of 2 other turtles [ distance myself ]
+    ]
+  ]
 end
 
 to lose-energy
-  ask comps [ set energy (energy - EnergyConsumption)]                                                 ;agents lose energy according to selected parameters
+  ask comps [ set energy (energy - EnergyConsumption)]      ;agents lose energy according to selected parameters
 end
 
 to grow-resource
@@ -73,7 +110,7 @@ end
 
 
 to-report check-end ;
-  ifelse (ResourceEnergy = 0 and ticks > 0) or (ticks > 2) [
+  ifelse (ResourceEnergy <= 0 and ticks > 0) or (ticks > 1999) [
     report true
   ][
     report false
@@ -81,27 +118,52 @@ to-report check-end ;
 end
 
 to consume-resource
-  ask comps [
+;  ask comps [
       (ifelse                                                ;all agents consume
       condition = 0 [
-        type " Condition is 0 "
         if (energy <= 0) [                                   ; when energy <= 0 consume
-          type " setting energy to " show energy + action
           set energy (energy + action)
-          set ResourceEnergy ResourceEnergy - action
+          if action != -5 [
+            set ResourceEnergy ResourceEnergy - action
+          ]
         ]
       ]
       condition = 1 [                                        ; always consume
         set energy (energy + action)
-        set ResourceEnergy ResourceEnergy - action
+        if action != -5 [
+          set ResourceEnergy ResourceEnergy - action
+        ]
       ][
         if((ticks mod condition)= 0) [                       ; consume on condition
           set energy (energy + action)
-          set ResourceEnergy ResourceEnergy - action
+          if action != -5 [
+            set ResourceEnergy ResourceEnergy - action
+          ]
         ]
     ])
-    ]
-  ;]
+;    ]
+end
+
+to consume-resource-institution
+;  ask comps [
+      (ifelse                                                ;all agents consume
+      InstitutionCondition = 0 [
+        if (energy <= 0) [                                   ; when energy <= 0 consume
+          ;type " setting energy to " show energy + action
+          set energy (energy + InstitutionAction)
+          set ResourceEnergy ResourceEnergy - InstitutionAction
+        ]
+      ]
+      InstitutionCondition = 1 [                                        ; always consume
+        set energy (energy + InstitutionAction)
+        set ResourceEnergy ResourceEnergy - InstitutionAction
+      ][
+        if((ticks mod InstitutionCondition)= 0) [                       ; consume on condition
+          set energy (energy + InstitutionAction)
+          set ResourceEnergy ResourceEnergy - InstitutionAction
+        ]
+    ])
+;    ]
 end
 
 to check-energy
@@ -112,6 +174,53 @@ to check-energy
       set lowEnergy? false
     ]
   ]
+end
+
+to evaluate-strategy
+  let bestAction action
+  let bestCondition condition
+  let bestNeighbourEnergy energy
+  let origin self
+  let neighbor self
+  if (energy < 0) [
+    ifelse (random-float 1 < InnovationRate)[   ;random innovation
+      set action select-action
+      set condition select-condition
+      set strategy (list action condition)
+    ][
+      ask out-link-neighbors  [
+         if energy > bestNeighbourEnergy [
+          set neighbor self
+          set bestNeighbourEnergy energy
+          set bestAction action
+          set bestCondition condition
+        ]
+      ]
+      set action bestAction
+      set condition bestCondition
+      set strategy (list action condition)
+    ]
+  ]
+end
+
+to check-institutional-change
+  if (ticks mod InstitutionalEmergenceTime) =  0  and ticks > 0 [
+    if (((count comps with [energy < 0]) / 100 )> ThresholdForChange)[                          ;if threshold for change met
+      set InstitutionalChange? true
+    ]
+  ]
+end
+
+to establish-new-institution
+  let frequent modes [strategy] of comps
+  set InstitutionAction item 0 item 0 frequent
+  set InstitutionCondition item 1 item 0 frequent
+;  ask comps [
+;    set institutionA
+;    set institutionC
+;    set institutionS frequent
+;  ]
+  set InstitutionExists? true
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -150,7 +259,7 @@ NumberOfAgents
 NumberOfAgents
 0
 100
-5.0
+100.0
 1
 1
 NIL
@@ -199,7 +308,7 @@ CarryingCapacity
 CarryingCapacity
 5000
 20000
-5000.0
+15000.0
 1000
 1
 NIL
@@ -214,7 +323,7 @@ GrowthRate
 GrowthRate
 0.1
 0.5
-0.1
+0.5
 0.2
 1
 NIL
@@ -227,8 +336,8 @@ CHOOSER
 261
 EnergyConsumption
 EnergyConsumption
-1 5 10
-1
+1 5 10 12 15 17 20
+5
 
 SLIDER
 21

@@ -10,7 +10,9 @@ globals [                                              ;create global variables 
   output-list
   mean-agent-energy
   mean-resource-energy
-  compliance-percentage
+  compliance-percentage-initial
+  initial-comply-number
+  compliance-percentage-end
   mean-ticks-end
 ]                                                      ; global variables used throughout code
 
@@ -35,11 +37,14 @@ to zero-counter
   let innov (list "Innov R" InnovationRate)
   let iet (list "IET" InstitutionalEmergenceTime)
   let tfc (list "TFC" ThresholdForChange)
-  set mean-agent-energy []
-  set mean-resource-energy []
-  set compliance-percentage []
-  set mean-ticks-end []
-  set output-list (list noagents carrying growth energylist innov iet tfc)
+;  set mean-agent-energy []
+;  set mean-resource-energy []
+;  set compliance-percentage []
+;  set mean-ticks-end []
+  set compliance-percentage-initial []
+  set compliance-percentage-end []
+  set output-list []
+;  set output-list (list noagents carrying growth energylist innov iet tfc)
 end
 
 
@@ -60,7 +65,9 @@ to setup
   ask comps [ set condition select-condition ]         ; agents select strategy
   ask comps [ set compliance compliance-probability ]
   ask comps [ set strategy (list action condition compliance) ]
-  type "% non compliance at beginning: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+  let compliance-p ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+  type "% non compliance at beginning: " show compliance-p
+  set initial-comply-number compliance-p
   create-neighbours ; create links
   set InstitutionalChange? false
 end
@@ -84,30 +91,30 @@ to go
     establish-new-institution
     set InstitutionalChange? false
   ]
-  ask comps [
-    ifelse compliance = 0 [
-      ifelse InstitutionExists? = true [
-          consume-resource-institution
-      ][
-        consume-resource
-      ]
-    ][
-      consume-greedy
-    ]
-  ]
-;  ifelse InstitutionExists? = true [
-;    ask comps[
-;      ifelse compliance = 0 [
-;        consume-resource-institution
-;      ][
-;        consume-resource
-;      ]
-;    ]
-;  ][
-;    ask comps [
-;    consume-resource
-;    ]
-;  ]
+;  ask comps [                                        ; ************************
+;    ifelse compliance = 0 [                          ; ************************
+;      ifelse InstitutionExists? = true [             ; ************************
+;          consume-resource-institution               ; ************************
+;      ][                                             ; ************************
+;        consume-resource                             ; * Uncomment for greedy from beginning
+;      ]                                              ; ************************
+;    ][                                               ; ************************
+;      consume-greedy                                 ; ************************
+;    ]                                                ; ************************
+;  ]                                                  ; ************************
+  ifelse InstitutionExists? = true [
+    ask comps[                                        ; ************************
+      ifelse compliance = 0 [                         ; ************************
+        consume-resource-institution                  ; ************************
+      ][                                              ; ************************
+        consume-greedy                                ; ************************
+      ]                                               ; * Comment out for greedy from beginning
+    ]                                                 ; ************************
+  ][                                                  ; ************************
+    ask comps [                                       ; ************************
+    consume-resource                                  ; ************************
+    ]                                                 ; ************************
+  ]                                                   ; ************************
   ask comps [ evaluate-strategy ]
   rewire-links
 
@@ -116,23 +123,24 @@ end
 
 to calculate-totals
     let percent-non-comply (((count comps with [compliance = 1])/ NumberOfAgents) * 100)
-    let mean-energy-comps (mean [energy] of comps)
-    let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
-    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
-    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
-    let ticklist (list iteration-counter "end tick" ticks)
-    set output-list insert-item 0 output-list resourcelist
-    set output-list insert-item 0 output-list meanAgentlist
-    set output-list insert-item 0 output-list institutionPlist
-    set output-list insert-item 0 output-list ticklist
+;    let mean-energy-comps (mean [energy] of comps)
+;    let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
+;    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
+;    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
+;    let ticklist (list iteration-counter "end tick" ticks)
+;    set output-list insert-item 0 output-list resourcelist
+;    set output-list insert-item 0 output-list meanAgentlist
+;    set output-list insert-item 0 output-list institutionPlist
+;    set output-list insert-item 0 output-list ticklist
 
 
-    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
-    set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
-    set mean-ticks-end insert-item 0 mean-ticks-end ticks
+;    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
+;    set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
+;    set mean-ticks-end insert-item 0 mean-ticks-end ticks
 
 ;  if InstitutionExists? = true [
-    set compliance-percentage insert-item 0 compliance-percentage percent-non-comply
+    set compliance-percentage-end insert-item 0 compliance-percentage-end percent-non-comply
+    set compliance-percentage-initial insert-item 0 compliance-percentage-initial initial-comply-number
 ;  ]
 
     type "ResourceEnergy: " show ResourceEnergy
@@ -142,18 +150,24 @@ to calculate-totals
 end
 
 to output-csv
-  let intialCompliance (list "compliance probability" probabilityNonCompliance)
-  let complianceTotalList (list "Mean % non compliance 30 runs" (mean compliance-percentage))
-  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
-  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
-  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
+;  let intialCompliance (list "compliance probability" probabilityNonCompliance)
+;  let complianceTotalList (list "Mean % non compliance 30 runs" (mean compliance-percentage))
+;  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
+;  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
+;  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
 
-  set output-list insert-item 0 output-list meanTicksTotalList
-  set output-list insert-item 0 output-list intialCompliance
-  set output-list insert-item 0 output-list complianceTotalList
-  set output-list insert-item 0 output-list meanAgentTotallist
-  set output-list insert-item 0 output-list resourceTotallist
-  set output-list reverse output-list
+;  set output-list insert-item 0 output-list meanTicksTotalList
+  foreach compliance-percentage-initial [ x ->
+    (set output-list insert-item 0 output-list (list "initial" x))
+  ]
+  foreach compliance-percentage-end [ x ->
+    (set output-list insert-item 0 output-list (list "end" x))
+  ]
+;  set output-list insert-item 0 output-list compliance-percentage-initial
+;  set output-list insert-item 0 output-list compliance-percentage-end
+;  set output-list insert-item 0 output-list meanAgentTotallist
+;  set output-list insert-item 0 output-list resourceTotallist
+;  set output-list reverse output-list
   csv:to-file "runs.csv" output-list
 end
 
@@ -217,7 +231,6 @@ to-report check-end ;
 end
 
 to consume-resource
-  ;ask comps [
       (ifelse                                                ;all agents consume
       condition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
@@ -241,7 +254,6 @@ to consume-resource
           ]
         ]
     ])
-    ;]
 end
 
 to consume-greedy
@@ -250,11 +262,9 @@ to consume-greedy
 end
 
 to consume-resource-institution
-  ;ask comps [
       (ifelse                                                ;all agents consume
       InstitutionCondition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
-          ;type " setting energy to " show energy + action
           set energy (energy + InstitutionAction)
           set ResourceEnergy ResourceEnergy - InstitutionAction
         ]
@@ -268,7 +278,6 @@ to consume-resource-institution
           set ResourceEnergy ResourceEnergy - InstitutionAction
         ]
     ])
-   ; ]
 end
 
 to check-energy
@@ -349,16 +358,8 @@ to check-institutional-change
   ]
 end
 
-; CHANGE TO GLOBAL VARIABLES !! !!
-
 to establish-new-institution
   let frequent modes [strategy] of comps
-;  ask comps [
-;    set institutionA item 0 item 0 frequent
-;    set institutionC item 1 item 0 frequent
-;    set institutionS frequent
-;    type " Institutional rule: " show frequent
-;  ]
   set InstitutionCondition item 1 item 0 frequent
   set InstitutionAction item 0 item 0 frequent
   set InstitutionExists? true

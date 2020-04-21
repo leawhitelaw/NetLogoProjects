@@ -1,7 +1,6 @@
 extensions [csv]
 breed [comps comp] ;creat computer breed
 globals [
-  ;ConditionList
   ResourceEnergy
   InstitutionalChange?
   InstitutionExists?
@@ -81,10 +80,10 @@ to go
   grow-resource                                        ; resource grows
   check-energy
 ;  check-institutional-change                          ; *****************
-  if InstitutionalChange? = true [                    ; *****************
-    establish-new-institution                         ; comment out these 5 lines for no institution results
-    set InstitutionalChange? false                    ; *****************
-  ]                                                   ; *****************
+;  if InstitutionalChange? = true [                    ; *****************
+;    establish-new-institution                         ; comment out these 5 lines for no institution results
+;    set InstitutionalChange? false                    ; *****************
+;  ]                                                   ; *****************
   ifelse InstitutionExists? = true [
     ask comps[
     consume-resource-institution
@@ -300,8 +299,6 @@ to check-institutional-change
     ]
   ]
 end
-
-; CHANGE TO GLOBAL VARIABLES !! !!
 
 to establish-new-institution
   let frequent modes [strategy] of comps

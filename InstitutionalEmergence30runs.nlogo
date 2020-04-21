@@ -1,7 +1,6 @@
 extensions [csv]
 breed [comps comp] ;creat computer breed
 globals [
-  ;ConditionList
   ResourceEnergy
   InstitutionalChange?
   InstitutionExists?
@@ -11,7 +10,6 @@ globals [
   output-list
   mean-agent-energy
   mean-resource-energy
-;  compliance-percentage
   mean-ticks-end
   number-institution-created
   institutions-list
@@ -68,8 +66,10 @@ end
 
 to go
   if (check-end = true) [ ;add values to list of outputs
-    calculate-totals
-    set iteration-counter iteration-counter + 1
+    if InstitutionExists? = false [
+      calculate-totals
+      set iteration-counter iteration-counter + 1
+    ]
     if (iteration-counter > 30)[
       output-csv
       stop
@@ -80,17 +80,19 @@ to go
   lose-energy
   grow-resource                                        ; resource grows
   check-energy
-;  check-institutional-change                          ; *****************
-;  if InstitutionalChange? = true [                    ; *****************
-;    establish-new-institution                         ; comment out these 5 lines for no institution results
-;    set InstitutionalChange? false                    ; *****************
-;  ]                                                   ; *****************
+  check-institutional-change                          ; *****************
+  if InstitutionalChange? = true [                    ; *****************
+      establish-new-institution                       ; comment out these 5 lines for no institution results
+    set InstitutionalChange? false                    ; *****************
+  ]                                                   ; *****************
   ifelse InstitutionExists? = true [
     ask comps[
     consume-resource-institution
     ]
   ][
+  ask comps [
     consume-resource
+  ]
   ]
   ask comps [ evaluate-strategy ]
   rewire-links
@@ -99,30 +101,28 @@ to go
 end
 
 to calculate-totals
-    let mean-energy-comps (mean [energy] of comps)
+;    let mean-energy-comps (mean [energy] of comps)
     let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
-    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
-    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
-    let ticklist (list iteration-counter "end tick" ticks)
-    let institution-created (list "strategy created: " (list InstitutionAction InstitutionCondition))
+;    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
+;    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
+;    let ticklist (list iteration-counter "end tick" ticks)
 
     set output-list insert-item 0 output-list resourcelist
-    set output-list insert-item 0 output-list meanAgentlist
-    set output-list insert-item 0 output-list institutionPlist
-    set output-list insert-item 0 output-list ticklist
+;    set output-list insert-item 0 output-list meanAgentlist
+;    set output-list insert-item 0 output-list institutionPlist
+;    set output-list insert-item 0 output-list ticklist
 
-  if InstitutionExists? = true [
-    set number-institution-created number-institution-created + 1
-    set institutions-list insert-item 0 institutions-list (list InstitutionAction InstitutionCondition)
-    set output-list insert-item 0 output-list institution-created
-  ]
+;  if InstitutionExists? = true [
+;    set number-institution-created number-institution-created + 1
+;    set institutions-list insert-item 0 institutions-list (list InstitutionAction InstitutionCondition)
+;  ]
 
-    if ticks > 1999 and InstitutionExists? = true [ ;only calculate mean for simulations that didn't depleat! and InstitutionExists? = true ;< - add this in to calculate institution present
-;    set institutions-created insert-item 0 institutions-created (list InstitutionAction InstitutionCondition)
-    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
-    set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
-  ]
-    set mean-ticks-end insert-item 0 mean-ticks-end ticks
+;    if ticks > 1999 and InstitutionExists? = true [ ;only calculate mean for simulations that didn't depleat! and InstitutionExists? = true ;< - add this in to calculate institution present
+;;    set institutions-created insert-item 0 institutions-created (list InstitutionAction InstitutionCondition)
+;    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
+;    set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
+;  ]
+;    set mean-ticks-end insert-item 0 mean-ticks-end ticks
 
     type "ResourceEnergy: " show ResourceEnergy
     type "Average Agent Energy" show mean [energy] of comps
@@ -133,25 +133,25 @@ end
 
 to output-csv
 ;  let complianceTotalList (list "Mean C 30 runs" (mean compliance-percentage))
-  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
-  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
-  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
-  let standard-dev-agent standard-deviation mean-agent-energy
-  let standard-dev-resource standard-deviation mean-resource-energy
-  let std-err-agents (standard-dev-agent / (sqrt (length mean-agent-energy)))
-  let std-err-resource (standard-dev-resource / (sqrt (length mean-resource-energy)))
+;  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
+;  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
+;  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
+;  let standard-dev-agent standard-deviation mean-agent-energy
+;  let standard-dev-resource standard-deviation mean-resource-energy
+;  let std-err-agents (standard-dev-agent / (sqrt (length mean-agent-energy)))
+;  let std-err-resource (standard-dev-resource / (sqrt (length mean-resource-energy)))
 
-  let std-err-agents-print (list "Std error AE" std-err-agents)
-  let std-err-resource-print (list "Std error RE" std-err-resource)
+;  let std-err-agents-print (list "Std error AE" std-err-agents)
+;  let std-err-resource-print (list "Std error RE" std-err-resource)
 
-  set output-list insert-item 0 output-list meanTicksTotalList
-  set output-list insert-item 0 output-list meanAgentTotallist
-  set output-list insert-item 0 output-list resourceTotallist
-  set output-list insert-item 0 output-list std-err-agents-print
-  set output-list insert-item 0 output-list std-err-resource-print
-  set output-list insert-item 0 output-list (list "% institution created" ((number-institution-created / 30) * 100))
-  set output-list insert-item 0 output-list (list "institutions" institutions-list)
-  set output-list reverse output-list
+;  set output-list insert-item 0 output-list meanTicksTotalList
+;  set output-list insert-item 0 output-list meanAgentTotallist
+;  set output-list insert-item 0 output-list resourceTotallist
+;;  set output-list insert-item 0 output-list std-err-agents-print
+;  set output-list insert-item 0 output-list std-err-resource-print
+;  set output-list insert-item 0 output-list (list "% institution created" ((number-institution-created / 30) * 100))
+;  set output-list insert-item 0 output-list (list "institutions" institutions-list)
+;  set output-list reverse output-list
   csv:to-file "runs.csv" output-list
 end
 
@@ -207,7 +207,6 @@ to-report check-end ;
 end
 
 to consume-resource
-  ask comps [
       (ifelse                                                ;all agents consume
       condition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
@@ -231,15 +230,12 @@ to consume-resource
           ]
         ]
     ])
-    ]
 end
 
 to consume-resource-institution
-;  ask comps [
       (ifelse                                                ;all agents consume
       InstitutionCondition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
-          ;type " setting energy to " show energy + action
           set energy (energy + InstitutionAction)
           set ResourceEnergy ResourceEnergy - InstitutionAction
         ]
@@ -253,7 +249,6 @@ to consume-resource-institution
           set ResourceEnergy ResourceEnergy - InstitutionAction
         ]
     ])
-;    ]
 end
 
 to check-energy
@@ -301,7 +296,6 @@ to check-institutional-change
   ]
 end
 
-; CHANGE TO GLOBAL VARIABLES !! !!
 
 to establish-new-institution
   let frequent modes [strategy] of comps
@@ -395,7 +389,7 @@ CarryingCapacity
 CarryingCapacity
 5000
 20000
-15000.0
+20000.0
 1000
 1
 NIL
@@ -424,7 +418,7 @@ CHOOSER
 EnergyConsumption
 EnergyConsumption
 1 3 5 10 12 15 17 20
-6
+0
 
 SLIDER
 21

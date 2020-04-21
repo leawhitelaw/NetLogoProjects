@@ -97,7 +97,6 @@ to consume-resource
       (ifelse                                                ;all agents consume
       condition = 0 [
         if (energy <= 0) [                                   ; when energy <= 0 consume
-          ;type " setting energy to " show energy + action
           set energy (energy + action)
           set ResourceEnergy ResourceEnergy - action
         ]
@@ -129,8 +128,6 @@ to evaluate-strategy
   let bestCondition condition
   let bestNeighbourEnergy energy
   let origin self
-;  type " my comp: " show self
-;  type " my energy: " show energy
   if (energy < 0) [
     ifelse (random-float 1 < InnovationRate)[   ;random innovation
       set action select-action
@@ -138,19 +135,12 @@ to evaluate-strategy
       set strategy (list action condition)
     ][
       ask out-link-neighbors  [
-;        type " origin: " show origin
-;        type " my neighbor: " show self
-;        type " neighbor energy: " show energy
-;        type " best energy: " show bestNeighbourEnergy
          if energy > bestNeighbourEnergy [
           set bestNeighbourEnergy energy
           set bestAction action
           set bestCondition condition
         ]
       ]
-;      type " best energy: " type bestNeighbourEnergy
-;      type " best action: " type bestAction
-;      type " best condition: " type bestCondition
       set action bestAction
       set condition bestCondition
     ]
