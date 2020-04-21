@@ -257,8 +257,8 @@ to consume-resource
 end
 
 to consume-greedy
-  set energy (energy + 50)
-  set ResourceEnergy ResourceEnergy - 50
+  set energy (energy + 30)
+  set ResourceEnergy ResourceEnergy - 30
 end
 
 to consume-resource-institution
@@ -620,39 +620,75 @@ HORIZONTAL
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This model is an agent-based model showing the evolution of institutions.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+Each agent in the model is initialised randomly with a strategy to consume the resource and links to their two closest neighbours. If an agent is unhappy with it's energy, it can copy the strategy of it's neighbour. At institutional emergence time, if the threshold for change (proportion of unhappy agents) is met then an institution will be established using the most frequently occuring strategy in the population. Agents must then follow these institutional rules until the end of the simulation but will be given the option to change the institution at each institutional emergence time.
+In this model, the agents have the option not to comply as part of their strategy.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+To run the model: Press setup, zero-counter then go.
+NumberOfAgents: Number of agents in the population.
+CarryingCapacity: Initial resource energy
+GrowthRate: How quickly the resource regrows
+EnergyConsumption: How much energy the agents lose on each tick
+Resource: Energy in the resource at any given time
+Tick: Tick in the simulation (out of 2000)
+InstitutionalEmergenceTime: What tick will an instituion be created if the threshold for change is met
+ThresholdForChange: Proportion of agents that must be unhappy to establish an institution
+zero-counter: Reset the counter of the amount of times the simulation has been run.
+probabilityNonCompliance: The probability that an agent will have non-compliance as 1 instead of 0 in it's action/condition strategy at the beginning of the simulation.
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+This model is good to observe how the non-compliance spreads between agents and how quickly a large percentage of non-compliance can deplete the resource. Comment and uncomment code in 'calculate-totals' and 'output-csv' to get desired results output to s CSV file.
+
+Others include:
+- Average agent energy
+- Energy at the end of a simulation
+- How often the resource depletes
+- Which strategy is chosen for an institution
+- Observe the patterns in agent energy shown in plots
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+Try playing around with:
+- Changing the probability of non-compliance
+- Changing whether the non-complying agents consume the greedy strategy from the beginning or only from when an institution is established
+- Changing the units of resource consumed by agents using the greedy strategy
+- Energy Consumption
+- Innovation Rate
+- Carrying Capacity
+- Population
+and observe their affects on the resource and agent energy.
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+An extension of this model would include sanctioning of non-compliant agents.
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+To change the number of times the simulation is run, replace the number in the following line in 'go': iteration-counter > 30 
+
+To change the units of energy consumed in the greedy strategy, change the number in
+to consume-greedy
+  set energy (energy + 30)
+  set ResourceEnergy ResourceEnergy - 30
+end
+where the number is currently 30.
+
+Comment or uncomment the lines in go to either have the agents consume greedy from the start or from when an institution is established.
+
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+IPD model.
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+Based off of the model in 'Managing the commons: a simple model of the mergence of institutions through collective action.' International Journal of the Commons, 10(1):200-219. Ghorbani, A. and Bravo, G. (2016)
 @#$#@#$#@
 default
 true
