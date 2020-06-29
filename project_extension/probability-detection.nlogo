@@ -12,8 +12,14 @@ globals [                                              ;create global variables 
   mean-resource-energy
   compliance-percentage-initial
   initial-comply-number
+  initial-monitor-number
   compliance-percentage-end
+  monitor-percentage-end
   mean-ticks-end
+  depleated-num
+  institution-list
+  first-institution-ticks
+  rand-seed
 ]                                                      ; global variables used throughout code
 
 comps-own [
@@ -25,26 +31,29 @@ comps-own [
   lowEnergy?
   strategy                                            ; strategy is set in form [action, condition, compliance]
   institutionS
-  compliance                                           ; binary value representing compliance (can be copied as part of strategy)
+  nonCompliance                                           ; binary value representing compliance (can be copied as part of strategy)
+  monitor
 ]                                                      ; variables belonging to a computer
 
 to zero-counter
   set iteration-counter 1
-  let noagents (list "no agents" NumberOfAgents)
-  let carrying (list "carrying K" CarryingCapacity)
-  let growth (list "Growith R" GrowthRate)
-  let energylist (list "Energy Consumption" EnergyConsumption)
-  let innov (list "Innov R" InnovationRate)
-  let iet (list "IET" InstitutionalEmergenceTime)
-  let tfc (list "TFC" ThresholdForChange)
-;  set mean-agent-energy []
+;  let noagents (list "no agents" NumberOfAgents)
+;  let carrying (list "carrying K" CarryingCapacity)
+;  let growth (list "Growith R" GrowthRate)
+;  let energylist (list "Energy Consumption" EnergyConsumption)
+;  let innov (list "Innov R" InnovationRate)
+;  let iet (list "IET" InstitutionalEmergenceTime)
+;  let tfc (list "TFC" ThresholdForChange)
+  set mean-agent-energy []
   set mean-resource-energy []
 ;  set compliance-percentage []
 ;  set mean-ticks-end []
   set compliance-percentage-initial []
   set compliance-percentage-end []
   set output-list []
-  set output-list (list "run" "ticks" "resource energy" "initial NC" "final NC")
+  set depleated-num 0
+  let title-row (list "run" "rand-seed" "ticks-end" "%NC-start" "%NC-end" "%monitor-start" "%monitor-end" "resource-energy" "mean-agent-energy" "modal-institution" "number-institutions-established" "institution-formed")
+  set output-list insert-item 0 output-list title-row
 end
 
 
@@ -55,6 +64,8 @@ to setup
   clear-patches
   clear-all-plots
   reset-ticks
+  set rand-seed new-seed
+  random-seed rand-seed
   create-comps NumberOfAgents
   ask comps [
     setxy random-xcor random-ycor
@@ -63,19 +74,26 @@ to setup
   set InstitutionExists? false
   ask comps [ set action select-action ]
   ask comps [ set condition select-condition ]         ; agents select strategy
-  ask comps [ set compliance compliance-probability ]
-  ask comps [ set strategy (list action condition compliance) ]
-  let compliance-p ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+  ask comps [ set nonCompliance compliance-probability ]
+  ask comps [ set monitor monitor-probability]
+  ask comps [ set strategy (list action condition nonCompliance) ]
+  let compliance-p ((count comps with [nonCompliance = 1])/ NumberOfAgents) * 100
+  let monitor-p ((count comps with [monitor = 1]) / NumberOfAgents) * 100
   type "% non compliance at beginning: " show compliance-p
   set initial-comply-number compliance-p
+  set initial-monitor-number monitor-p
   create-neighbours ; create links
   set InstitutionalChange? false
+  set institution-list []
 end
 
 to go
   if (check-end = true) [ ;add values to list of outputs
     calculate-totals
     set iteration-counter iteration-counter + 1
+    if (ResourceEnergy <= 0)[
+      set depleated-num (depleated-num + 1)
+    ]
     if (iteration-counter > 30)[
       output-csv
       stop
@@ -104,7 +122,7 @@ to go
 ;  ]                                                  ; ************************
   ifelse InstitutionExists? = true [
     ask comps[                                        ; ************************
-      ifelse compliance = 0 [                         ; ************************
+      ifelse nonCompliance = 0 [                      ; ************************
         consume-resource-institution                  ; ************************
       ][                                              ; ************************
         consume-greedy                                ; ************************
@@ -115,15 +133,26 @@ to go
     consume-resource                                  ; ************************
     ]                                                 ; ************************
   ]                                                   ; ************************
+  monitor-non-compliance
+  pay-for-monitoring
   ask comps [ evaluate-strategy ]
   rewire-links
-
+  if (ticks mod 50)= 0 [
+    if InstitutionExists? = true [
+      set institution-list insert-item 0 institution-list (list InstitutionAction InstitutionCondition)
+    ]
+  ]
+;  type "****tick*** " show ticks
+;  type "agents with energy less than zero: " show count comps with [energy < 0]
   tick
 end
 
 to calculate-totals
-    let percent-non-comply (((count comps with [compliance = 1])/ NumberOfAgents) * 100)
-;    let mean-energy-comps (mean [energy] of comps)
+    let percent-non-comply (((count comps with [nonCompliance = 1])/ NumberOfAgents) * 100)
+    let percent-monitor (((count comps with [monitor = 1]) / NumberOfAgents) * 100)
+    let mean-energy-comps (mean [energy] of comps)
+    let modal-institution modes institution-list
+    set institution-list remove-duplicates institution-list
 ;    let resourcelist (list iteration-counter "ResourceEnergy" ResourceEnergy)
 ;    let meanAgentlist (list iteration-counter "Average Agent Energy" mean-energy-comps)
 ;    let institutionPlist (list iteration-counter "institution present" InstitutionExists?)
@@ -134,44 +163,53 @@ to calculate-totals
 ;    set output-list insert-item 0 output-list ticklist
 
 
-;    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
+    set mean-agent-energy insert-item 0 mean-agent-energy mean-energy-comps
     set mean-resource-energy insert-item 0 mean-resource-energy ResourceEnergy
 ;    set mean-ticks-end insert-item 0 mean-ticks-end ticks
-  let simulation-results (list iteration-counter ticks ResourceEnergy initial-comply-number percent-non-comply)
-  set output-list insert-item 0 output-list simulation-results
 
 ;  if InstitutionExists? = true [
 ;    set compliance-percentage-end insert-item 0 compliance-percentage-end percent-non-comply
 ;    set compliance-percentage-initial insert-item 0 compliance-percentage-initial initial-comply-number
-;  ]
+;;
+  let simulation-results (list iteration-counter rand-seed ticks initial-comply-number percent-non-comply initial-monitor-number percent-monitor ResourceEnergy mean-energy-comps modal-institution (length institution-list) first-institution-ticks)
+  set output-list insert-item 0 output-list simulation-results
 
     type "ResourceEnergy: " show ResourceEnergy
     type "Average Agent Energy" show mean [energy] of comps
     type "Institution present?" show InstitutionExists?
-    type "% non compliance at end: " show ((count comps with [compliance = 1])/ NumberOfAgents) * 100
+    type "% non compliance at end: " show ((count comps with [nonCompliance = 1])/ NumberOfAgents) * 100
 end
 
 to output-csv
 ;  let intialCompliance (list "compliance probability" probabilityNonCompliance)
-;  let complianceTotalList (list "Mean % non compliance 30 runs" (mean compliance-percentage))
-  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
-;  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
-;  let meanTicksTotalList (list "Mean ticks end" (mean mean-ticks-end))
+  ;let complianceTotalList (list "Mean % non compliance 30 runs" (mean compliance-percentage))
 
-;  set output-list insert-item 0 output-list meanTicksTotalList
+  let resourceTotalList (list "Mean RE 30 runs" (mean mean-resource-energy))
+  let meanAgentTotalList (list "Mean AE 30 runs" (mean mean-agent-energy))
+
+  let standard-dev-agent standard-deviation mean-agent-energy
+  let standard-dev-resource standard-deviation mean-resource-energy
+  let std-err-agents (standard-dev-agent / (sqrt (length mean-agent-energy)))
+  let std-err-resource (standard-dev-resource / (sqrt (length mean-resource-energy)))
+
+  let std-err-agents-print (list "Std error AE 30 runs" std-err-agents)
+  let std-err-resource-print (list "Std error RE 30 runs" std-err-resource)
+
+  let percent-depleat (list "% depleted 30 runs " (depleated-num / 30))
 ;  foreach compliance-percentage-initial [ x ->
 ;    (set output-list insert-item 0 output-list (list "initial" x))
 ;  ]
 ;  foreach compliance-percentage-end [ x ->
 ;    (set output-list insert-item 0 output-list (list "end" x))
 ;  ]
-;  foreach mean-resource-energy [ x ->
-;    (set output-list insert-item 0 output-list (list "RE" x))
-;  ]
+
+  set output-list insert-item 0 output-list percent-depleat
 ;  set output-list insert-item 0 output-list compliance-percentage-initial
 ;  set output-list insert-item 0 output-list compliance-percentage-end
-;  set output-list insert-item 0 output-list meanAgentTotallist
-;  set output-list insert-item 0 output-list resourceTotallist
+  set output-list insert-item 0 output-list std-err-agents-print
+  set output-list insert-item 0 output-list std-err-resource-print
+  set output-list insert-item 0 output-list meanAgentTotallist
+  set output-list insert-item 0 output-list resourceTotallist
   set output-list reverse output-list
   csv:to-file "runs.csv" output-list
 end
@@ -193,6 +231,14 @@ end
 
 to-report compliance-probability
   ifelse random-float 1 < probabilityNonCompliance [
+    report 1
+  ][
+    report 0
+  ]
+end
+
+to-report monitor-probability
+  ifelse random-float 1 < probabilityMonitor [
     report 1
   ][
     report 0
@@ -299,15 +345,17 @@ to evaluate-strategy
   let bestAction action
   let bestCondition condition
   let bestNeighbourEnergy energy
-  let bestCompliance compliance
+  let bestCompliance nonCompliance
+  let bestMonitor monitor
   let origin self
   let neighbor self
   if (energy < 0) [
     ifelse (random-float 1 < InnovationRate)[   ;random innovation
       set action select-action
       set condition select-condition
-      set compliance compliance-probability
-      set strategy (list action condition compliance)
+      ;set monitor monitor-probability
+      ;set nonCompliance non
+      set strategy (list action condition nonCompliance)
     ][
       ask out-link-neighbors  [
          if energy > bestNeighbourEnergy [
@@ -315,13 +363,50 @@ to evaluate-strategy
           set bestNeighbourEnergy energy
           set bestAction action
           set bestCondition condition
-          set bestCompliance compliance
+          set bestCompliance nonCompliance
+          set bestMonitor monitor
         ]
       ]
       set action bestAction
       set condition bestCondition
-      set compliance bestCompliance
-      set strategy (list action condition compliance)
+      set nonCompliance bestCompliance
+      set monitor bestMonitor
+      set strategy (list action condition nonCompliance)
+    ]
+  ]
+end
+
+to evaluate-strategy-action-condition
+  let bestAction action
+  let bestCondition condition
+  let bestNeighbourEnergy energy
+  let bestCompliance nonCompliance
+  let bestMonitor monitor
+  let origin self
+  let neighbor self
+  if (energy < 0) [
+    ifelse (random-float 1 < InnovationRate)[   ;random innovation
+      set action select-action
+      set condition select-condition
+      set nonCompliance compliance-probability
+      set monitor monitor-probability
+      set strategy (list action condition nonCompliance)
+    ][
+      ask out-link-neighbors  [
+         if energy > bestNeighbourEnergy [
+          set neighbor self
+          set bestNeighbourEnergy energy
+          set bestAction action
+          set bestCondition condition
+          set bestCompliance nonCompliance
+          set bestMonitor monitor
+        ]
+      ]
+      set action bestAction
+      set condition bestCondition
+      set nonCompliance bestCompliance
+      set monitor bestMonitor
+      set strategy (list action condition nonCompliance)
     ]
   ]
 end
@@ -330,27 +415,31 @@ to evaluate-strategy-global
   let bestEnergy energy
   let bestAction action
   let bestCondition condition
-  let bestCompliance compliance
+  let bestCompliance nonCompliance
+  let bestMonitor monitor
 
   if (energy < 0) [
     ifelse (random-float 1 < InnovationRate)[   ;random innovation
       set action select-action
       set condition select-condition
-      set compliance compliance-probability
-      set strategy (list action condition compliance)
+      set nonCompliance compliance-probability
+      set monitor monitor-probability
+      set strategy (list action condition nonCompliance)
     ][
       ask other comps  [
          if energy > bestEnergy [
           set bestEnergy energy
           set bestCondition condition
           set bestAction action
-          set bestCompliance compliance
+          set bestCompliance nonCompliance
+          set bestMonitor monitor
         ]
       ]
       set action bestAction
       set condition bestCondition
-      set compliance bestCompliance
-      set strategy (list action condition compliance)
+      set nonCompliance bestCompliance
+      set monitor bestMonitor
+      set strategy (list action condition nonCompliance)
     ]
   ]
 end
@@ -364,10 +453,61 @@ to check-institutional-change
 end
 
 to establish-new-institution
+  if InstitutionExists? = false [
+    set first-institution-ticks ticks
+  ]
   let frequent modes [strategy] of comps
   set InstitutionCondition item 1 item 0 frequent
   set InstitutionAction item 0 item 0 frequent
   set InstitutionExists? true
+end
+
+;to sanction-non-compliance
+;  if compliance = 1 [
+;    set energy (energy - sanctionCost)
+;  ]
+;end
+
+;to sanction-non-compliance
+;  let number-sanctioned-agents count comps with [nonCompliance = 1]
+;  if number-sanctioned-agents > 0 [
+;    let sanctionPrice ((ResourceEnergy * paymentForSanction) / number-sanctioned-agents)
+;;    type "resource energy: " show ResourceEnergy
+;;    type "sanction amount: " show sanctionPrice
+;;    type "number of agents being sanctioned: " show number-sanctioned-agents
+;    ask comps [
+;      if nonCompliance = 1 [
+;        set energy (energy - sanctionPrice)
+;      ]
+;    ]
+;    set ResourceEnergy ResourceEnergy - (ResourceEnergy * paymentForSanction)
+;  ]
+;end
+
+to monitor-non-compliance
+  let num-monitors count comps with [monitor = 1]
+  let probability-detected ( (num-monitors * agentsMonitored) / numberOfAgents )
+  ask comps [
+    if random-float 1 < probability-detected [
+      if nonCompliance = 1 [
+        set energy (energy - sanctionCost)
+      ]
+    ]
+  ]
+end
+
+to pay-for-monitoring
+  let num-monitors count comps with [monitor = 1]
+  let cost agentsMonitored * (sanctionCost * costForMonitor)
+  if num-monitors >= 1 [
+    let payment ( paymentForMonitor * ResourceEnergy ) / num-monitors
+    ask comps [
+      if monitor = 1 [
+        set energy (energy - cost + payment)
+        set ResourceEnergy ResourceEnergy - payment
+      ]
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -454,9 +594,9 @@ SLIDER
 CarryingCapacity
 CarryingCapacity
 5000
-20000
+30000
 15000.0
-1000
+500
 1
 NIL
 HORIZONTAL
@@ -495,17 +635,17 @@ InnovationRate
 InnovationRate
 0.05
 0.1
-0.1
+0.05
 0.05
 1
 NIL
 HORIZONTAL
 
 MONITOR
-22
-311
-93
-356
+241
+456
+312
+501
 Resource
 ResourceEnergy
 2
@@ -513,10 +653,10 @@ ResourceEnergy
 11
 
 MONITOR
-107
-311
-164
-356
+345
+455
+402
+500
 Tick
 ticks
 1
@@ -524,20 +664,20 @@ ticks
 11
 
 CHOOSER
-10
-365
-206
-410
+11
+314
+207
+359
 InstitutionalEmergenceTime
 InstitutionalEmergenceTime
 50 100 200 500 1000
 0
 
 CHOOSER
-23
-419
-179
-464
+31
+368
+187
+413
 ThresholdForChange
 ThresholdForChange
 0.4 0.6 0.8 1
@@ -580,10 +720,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plotxy ticks ResourceEnergy"
 
 BUTTON
-14
-490
-168
-523
+417
+460
+571
+493
 zero-counter
 zero-counter
 NIL
@@ -597,10 +737,10 @@ NIL
 1
 
 MONITOR
-198
-483
-262
-528
+584
+456
+648
+501
 Counter
 iteration-counter
 17
@@ -608,16 +748,86 @@ iteration-counter
 11
 
 SLIDER
-321
-486
-539
-519
+3
+452
+221
+485
 probabilityNonCompliance
 probabilityNonCompliance
 0.1
 1
 0.2
 0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+5
+493
+221
+526
+sanctionCost
+sanctionCost
+0
+50
+15.0
+1
+1
+agentEnergy
+HORIZONTAL
+
+CHOOSER
+8
+612
+146
+657
+agentsMonitored
+agentsMonitored
+1 5 10
+1
+
+SLIDER
+6
+533
+178
+566
+probabilityMonitor
+probabilityMonitor
+0
+1
+0.2
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+240
+509
+589
+542
+costForMonitor
+costForMonitor
+0
+1
+0.2
+0.1
+1
+proportion of sanction cost
+HORIZONTAL
+
+SLIDER
+7
+572
+182
+605
+paymentForMonitor
+paymentForMonitor
+0
+1
+0.03
+0.001
 1
 NIL
 HORIZONTAL
